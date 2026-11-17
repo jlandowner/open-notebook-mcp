@@ -1,0 +1,36 @@
+# Example policy for the MCP pod. Adapt app labels and ports to your cluster.
+# A separate existing Hermes egress policy must deny Hermes -> Open Notebook.
+apiVersion: cilium.io/v2
+kind: CiliumNetworkPolicy
+metadata:
+  name: open-notebook-mcp-isolation
+spec:
+  endpointSelector:
+    matchLabels:
+      app.kubernetes.io/name: open-notebook-mcp
+  ingress:
+    - fromEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: hermes
+      toPorts:
+        - ports:
+            - port: "8000"
+              protocol: TCP
+  egress:
+    - toEndpoints:
+        - matchLabels:
+            app.kubernetes.io/name: open-notebook
+      toPorts:
+        - ports:
+            - port: "5055"
+              protocol: TCP
+    - toEndpoints:
+        - matchLabels:
+            "k8s:io.kubernetes.pod.namespace": kube-system
+            "k8s:k8s-app": kube-dns
+      toPorts:
+        - ports:
+            - port: "53"
+              protocol: UDP
+            - port: "53"
+              protocol: TCP

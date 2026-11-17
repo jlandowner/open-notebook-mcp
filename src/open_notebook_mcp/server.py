@@ -13,7 +13,14 @@ from mcp.server.fastmcp import FastMCP
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("open-notebook-mcp")
 
-mcp = FastMCP("open-notebook-mcp")
+mcp = FastMCP(
+    "open-notebook-mcp",
+    host=os.getenv("HOST", "127.0.0.1"),
+    port=int(os.getenv("PORT", "8000")),
+    streamable_http_path=os.getenv("MCP_PATH", "/mcp"),
+    stateless_http=os.getenv("STATELESS_HTTP", "1") == "1",
+    json_response=os.getenv("JSON_RESPONSE", "1") == "1",
+)
 
 # -----------------------------
 # Configuration and Constants
@@ -1283,29 +1290,22 @@ async def update_settings(settings: dict[str, Any]) -> dict[str, Any]:
 # -----------------------------
 
 def main() -> None:
-    """Main entry point for the MCP server."""
-    # Default: stdio (Codex/local)
+    """Run the stdio server or the authenticated HTTP ASGI application."""
     transport = os.getenv("MCP_TRANSPORT", "stdio").strip().lower()
-
     if transport == "stdio":
         mcp.run(transport="stdio")
         return
+    if transport != "streamable-http":
+        raise ValueError(f"Unsupported MCP_TRANSPORT: {transport}")
 
-    # Streamable HTTP (prod/remote)
-    host = os.getenv("HOST", "127.0.0.1")
-    port = int(os.getenv("PORT", "8000"))
-    path = os.getenv("MCP_PATH", "/mcp")
-    stateless_http = os.getenv("STATELESS_HTTP", "1") == "1"
-    json_response = os.getenv("JSON_RESPONSE", "1") == "1"
+    # Fail closed before creating/binding a listener; also covers MCP DELETE.
+    from .http_auth import authenticated_mcp_app, require_auth_token
+    import uvicorn
 
-    mcp.run(
-        transport="streamable-http",
-        host=host,
-        port=port,
-        path=path,
-        stateless_http=stateless_http,
-        json_response=json_response,
-    )
+    token = require_auth_token()
+    app = authenticated_mcp_app(mcp.streamable_http_app(), token)
+    uvicorn.run(app, host=mcp.settings.host, port=mcp.settings.port, log_level="info")
+
 
 if __name__ == "__main__":
     main()
