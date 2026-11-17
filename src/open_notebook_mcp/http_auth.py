@@ -1,6 +1,6 @@
 """ASGI authentication for the internal Streamable HTTP MCP endpoint.
 
-This is a static shared-token mechanism for a private Kubernetes service,
+This is a static shared-token mechanism for a restricted HTTP endpoint,
 not an OAuth 2.1 authorization-server implementation.
 """
 

@@ -9,8 +9,8 @@ from contextlib import contextmanager
 
 IMAGE = "open-notebook-mcp:test"
 TOKEN = secrets.token_hex(32)
-SERVICE = "open-notebook-mcp.default.svc.cluster.local"
-ORIGIN = "https://hermes.internal"
+SERVICE = "mcp.example.test"
+ORIGIN = "https://client.example.test"
 
 
 def docker(*args):
