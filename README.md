@@ -14,6 +14,7 @@ An MCP (Model Context Protocol) server that provides tools to interact with the 
 - **Chat Sessions**: Create and manage chat conversations
 - **Settings**: Access and update application settings
 - **Progressive Disclosure**: Efficient tool discovery with `search_capabilities`
+- **Write Guardrails**: Notebook write operations are blocked unless notebook IDs are explicitly allowlisted
 
 ## Installation
 
@@ -49,6 +50,10 @@ OPEN_NOTEBOOK_URL=http://localhost:5055
 # Optional: Authentication password (if APP_PASSWORD is set in Open Notebook)
 OPEN_NOTEBOOK_PASSWORD=your_password_here
 
+# Optional: explicit allowlist for notebook writes (comma-separated IDs)
+# If unset/empty/no valid IDs, notebook writes are denied (fail closed)
+OPEN_NOTEBOOK_WRITABLE_NOTEBOOK_IDS=notebook:abc123,notebook:def456
+
 # Optional: Transport configuration (default: stdio)
 MCP_TRANSPORT=stdio  # or streamable-http for remote deployment
 ```
@@ -69,6 +74,20 @@ If you've configured authentication in Open Notebook:
 OPEN_NOTEBOOK_URL=http://localhost:5055
 OPEN_NOTEBOOK_PASSWORD=my_secure_password
 ```
+
+### Notebook write allowlist (default deny)
+
+To restrict write operations, set `OPEN_NOTEBOOK_WRITABLE_NOTEBOOK_IDS` to a comma-separated list of notebook IDs:
+
+```bash
+OPEN_NOTEBOOK_WRITABLE_NOTEBOOK_IDS=notebook:abc123, notebook:def456
+```
+
+- IDs are matched exactly after trimming whitespace.
+- Empty entries and duplicates are ignored.
+- If unset/empty/no valid IDs, writes are rejected with `NOTEBOOK_WRITE_FORBIDDEN`.
+- Guarded operations: `create_notebook` (always rejected), `update_notebook`, `create_source`, `update_source`, `create_note`, `update_note`.
+- Read/search tools remain available regardless of allowlist.
 
 ## Usage
 
@@ -140,15 +159,11 @@ search_capabilities(query="create_notebook", detail="full", limit=1)
 #### Creating and Managing Notebooks
 
 ```python
-# Create a new notebook
-result = create_notebook(
-    name="AI Research",
-    description="Research on AI applications"
-)
-notebook_id = result["notebook"]["id"]
-
 # List all notebooks
 notebooks = list_notebooks(archived=False, limit=20)
+
+# Pick an existing notebook ID from the list
+notebook_id = notebooks["notebooks"][0]["id"]
 
 # Update a notebook
 update_notebook(

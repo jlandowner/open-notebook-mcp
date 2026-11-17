@@ -37,6 +37,80 @@ def generate_request_id() -> str:
     """Generate a unique request ID for tracking."""
     return str(uuid.uuid4())
 
+def get_writable_notebook_ids() -> set[str]:
+    """Get allowlisted writable notebook IDs from environment.
+
+    Returns an empty set when not configured or when no valid IDs are provided
+    (fail-closed behavior).
+    """
+    raw = os.getenv("OPEN_NOTEBOOK_WRITABLE_NOTEBOOK_IDS", "")
+    ids = [item.strip() for item in raw.split(",")]
+    return {item for item in ids if item}
+
+def _extract_notebook_id(resource: Any) -> Optional[str]:
+    """Extract notebook ID from a source/note payload."""
+    if not isinstance(resource, dict):
+        return None
+
+    notebook_id = resource.get("notebook_id")
+    if isinstance(notebook_id, str) and notebook_id.strip():
+        return notebook_id.strip()
+
+    notebook_id = resource.get("notebookId")
+    if isinstance(notebook_id, str) and notebook_id.strip():
+        return notebook_id.strip()
+
+    notebook = resource.get("notebook")
+    if isinstance(notebook, dict):
+        notebook_id = notebook.get("id")
+        if isinstance(notebook_id, str) and notebook_id.strip():
+            return notebook_id.strip()
+
+    return None
+
+def make_write_forbidden_error(
+    operation: str,
+    target: str,
+    *,
+    notebook_id: Optional[str] = None,
+    reason: str = "notebook_not_allowlisted",
+) -> dict[str, Any]:
+    """Create a structured forbidden-write error response."""
+    error: dict[str, Any] = {
+        "code": "NOTEBOOK_WRITE_FORBIDDEN",
+        "message": f"Write operation '{operation}' is forbidden by notebook allowlist policy.",
+        "operation": operation,
+        "target": target,
+        "reason": reason,
+    }
+    if notebook_id is not None:
+        error["notebook_id"] = notebook_id
+
+    return {
+        "request_id": generate_request_id(),
+        "error": error,
+    }
+
+def ensure_notebook_write_allowed(operation: str, notebook_id: Optional[str], target: str) -> Optional[dict[str, Any]]:
+    """Return forbidden error response when write is not allowlisted."""
+    if notebook_id is None or not notebook_id.strip():
+        return make_write_forbidden_error(
+            operation,
+            target,
+            reason="notebook_id_unknown",
+        )
+
+    notebook_id = notebook_id.strip()
+    writable_notebook_ids = get_writable_notebook_ids()
+    if notebook_id not in writable_notebook_ids:
+        return make_write_forbidden_error(
+            operation,
+            target,
+            notebook_id=notebook_id,
+        )
+
+    return None
+
 # -----------------------------
 # Capability index (source of truth)
 # -----------------------------
@@ -562,15 +636,11 @@ async def create_notebook(name: str, description: Optional[str] = None) -> dict[
     Returns:
         Created notebook details
     """
-    data = {"name": name}
-    if description is not None:
-        data["description"] = description
-    
-    notebook = await make_request("POST", "/api/notebooks", json_data=data)
-    return {
-        "request_id": generate_request_id(),
-        "notebook": notebook,
-    }
+    return make_write_forbidden_error(
+        "create_notebook",
+        "notebook:create",
+        reason="operation_not_permitted",
+    )
 
 @mcp.tool()
 async def update_notebook(
@@ -590,6 +660,10 @@ async def update_notebook(
     Returns:
         Updated notebook details
     """
+    forbidden = ensure_notebook_write_allowed("update_notebook", notebook_id, f"notebook:{notebook_id}")
+    if forbidden is not None:
+        return forbidden
+
     data = {}
     if name is not None:
         data["name"] = name
@@ -688,6 +762,10 @@ async def create_source(
     Returns:
         Created source details
     """
+    forbidden = ensure_notebook_write_allowed("create_source", notebook_id, f"notebook:{notebook_id}")
+    if forbidden is not None:
+        return forbidden
+
     data = {
         "notebook_id": notebook_id,
         "type": type,
@@ -720,6 +798,15 @@ async def update_source(
     Returns:
         Updated source details
     """
+    try:
+        source = await make_request("GET", f"/api/sources/{source_id}")
+    except Exception:
+        source = None
+    notebook_id = _extract_notebook_id(source)
+    forbidden = ensure_notebook_write_allowed("update_source", notebook_id, f"source:{source_id}")
+    if forbidden is not None:
+        return forbidden
+
     data = {}
     if title is not None:
         data["title"] = title
@@ -814,6 +901,10 @@ async def create_note(
     Returns:
         Created note details
     """
+    forbidden = ensure_notebook_write_allowed("create_note", notebook_id, f"notebook:{notebook_id}")
+    if forbidden is not None:
+        return forbidden
+
     data = {
         "notebook_id": notebook_id,
         "title": title,
@@ -846,6 +937,15 @@ async def update_note(
     Returns:
         Updated note details
     """
+    try:
+        note = await make_request("GET", f"/api/notes/{note_id}")
+    except Exception:
+        note = None
+    notebook_id = _extract_notebook_id(note)
+    forbidden = ensure_notebook_write_allowed("update_note", notebook_id, f"note:{note_id}")
+    if forbidden is not None:
+        return forbidden
+
     data = {}
     if title is not None:
         data["title"] = title
