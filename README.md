@@ -214,7 +214,7 @@ answer = ask_simple(
 
 ## Available Tools
 
-The server provides 22 tools across multiple categories:
+The server provides 19 tools across multiple categories:
 
 ### Meta Tools
 
