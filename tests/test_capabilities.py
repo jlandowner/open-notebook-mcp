@@ -81,6 +81,31 @@ def test_search_capabilities_limit():
     assert result["count"] <= 50
 
 
+def test_disallowed_model_chat_and_settings_tools_absent():
+    """The public MCP tool catalog must not expose disallowed model/chat/settings tools."""
+    names = {cap.name for cap in CAPABILITIES}
+    forbidden = {
+        "list_models",
+        "get_model",
+        "create_model",
+        "delete_model",
+        "get_default_models",
+        "list_chat_sessions",
+        "create_chat_session",
+        "get_chat_session",
+        "update_chat_session",
+        "delete_chat_session",
+        "execute_chat",
+        "get_chat_context",
+        "get_settings",
+        "update_settings",
+    }
+    assert names.isdisjoint(forbidden)
+    assert "search" in names
+    assert "ask_question" in names
+    assert "ask_simple" in names
+
+
 if __name__ == "__main__":
     # Run tests
     test_capabilities_defined()
@@ -97,5 +122,8 @@ if __name__ == "__main__":
 
     test_search_capabilities_limit()
     print("✓ test_search_capabilities_limit passed")
+
+    test_disallowed_model_chat_and_settings_tools_absent()
+    print("✓ test_disallowed_model_chat_and_settings_tools_absent passed")
 
     print("\n✅ All tests passed!")
