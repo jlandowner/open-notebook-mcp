@@ -99,7 +99,9 @@ def test_actual_mcp_initialize_list_and_call():
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
     }
-    with TestClient(app, base_url="http://127.0.0.1") as client:
+    # The MCP SDK's localhost DNS-rebinding protection requires Host to include a port.
+    # Starlette TrustedHostMiddleware validates the hostname independently.
+    with TestClient(app, base_url="http://127.0.0.1:8000") as client:
         def call(method, request_id, params=None):
             result = client.post(
                 "/mcp",
