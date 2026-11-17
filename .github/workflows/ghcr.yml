@@ -23,6 +23,8 @@ jobs:
         run: uv run --frozen pytest -q
       - name: Verify image can be built
         run: docker build -t open-notebook-mcp:test .
+      - name: Test real container and authenticated MCP over HTTP
+        run: python scripts/container_e2e.py
 
   publish:
     needs: test

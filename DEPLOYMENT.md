@@ -58,3 +58,19 @@ Inject `OPEN_NOTEBOOK_MCP_TOKEN` in the Hermes Pod with `valueFrom.secretKeyRef`
 The static Bearer Token is intended only for a restricted, internal Kubernetes service. It is **not** an implementation of MCP OAuth 2.1. HTTP plus Bearer does not encrypt credentials or content on the wire. If Pod-network interception is in scope, enforce TLS/mTLS or Cilium's transparent traffic encryption. Expose neither MCP nor Open Notebook to the public Internet.
 
 For verification, make an unauthenticated MCP request and confirm HTTP 401, then initialize and list tools with a valid Authorization header. The tests also check malformed tokens, Host/Origin constraints, session DELETE, and a real MCP `initialize` → `tools/list` → `tools/call` sequence.
+
+### Container E2E verification
+
+Run `docker build -t open-notebook-mcp:test .` followed by
+`python scripts/container_e2e.py` (Python standard library only). The GHCR
+workflow runs both commands on every PR. The test starts the actual image with
+UID 10001, a read-only root filesystem, a temporary `/tmp`, dropped capabilities,
+and no privilege escalation. A separate `--network none` startup check proves
+that the entrypoint needs no runtime downloads. Host-side HTTP checks cover
+Bearer rejection on GET/POST/DELETE, initialize/discovery/tool calls, Service DNS
+Host with a port, Origin restrictions, and stateful session termination in
+addition to the default stateless configuration. Containers and test networks
+are removed even on failure; generated test credentials are not logged.
+
+This does not exercise a live Open Notebook API, GHCR publication/pull, Hermes,
+or Kubernetes/Cilium enforcement. Validate those separately in the target cluster.
