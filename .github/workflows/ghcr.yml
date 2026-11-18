@@ -1,12 +1,10 @@
-name: Test and publish container to GHCR
+name: Test container
 
 on:
   pull_request:
     branches: [main]
   push:
     branches: [main]
-    tags: ["v*"]
-  workflow_dispatch:
 
 permissions:
   contents: read
@@ -14,9 +12,6 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
-    outputs:
-      tags: ${{ steps.meta.outputs.tags }}
-      image_id: ${{ steps.archive.outputs.image_id }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -27,72 +22,11 @@ jobs:
           enable-cache: true
       - name: Test with locked dependencies
         run: uv run --frozen pytest -q
-      - name: Image metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ghcr.io/${{ github.repository }}
-          tags: |
-            type=raw,value=main,enable=${{ github.ref == 'refs/heads/main' }}
-            type=semver,pattern={{version}}
-            type=sha
       - name: Build image for testing
         uses: docker/build-push-action@v6
         with:
           context: .
           load: true
           tags: open-notebook-mcp:test
-          labels: ${{ steps.meta.outputs.labels }}
       - name: Test real container and authenticated MCP over HTTP
         run: python scripts/container_e2e.py
-      - name: Archive tested image
-        id: archive
-        if: github.event_name != 'pull_request'
-        shell: bash
-        run: |
-          image_id=$(docker image inspect --format '{{.Id}}' open-notebook-mcp:test)
-          echo "image_id=$image_id" >> "$GITHUB_OUTPUT"
-          docker image save open-notebook-mcp:test | gzip > tested-image.tar.gz
-      - name: Upload tested image
-        if: github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v4
-        with:
-          name: tested-image
-          path: tested-image.tar.gz
-          if-no-files-found: error
-          compression-level: 0
-          overwrite: true
-
-  publish:
-    needs: test
-    if: github.event_name != 'pull_request'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      packages: write
-    steps:
-      - name: Download tested image
-        uses: actions/download-artifact@v4
-        with:
-          name: tested-image
-      - name: Load and verify tested image
-        env:
-          TESTED_IMAGE_ID: ${{ needs.test.outputs.image_id }}
-        run: |
-          docker image load --input tested-image.tar.gz
-          test "$(docker image inspect --format '{{.Id}}' open-notebook-mcp:test)" = "$TESTED_IMAGE_ID"
-      - name: Log in to GHCR
-        uses: docker/login-action@v3
-        with:
-          registry: ghcr.io
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
-      - name: Push tested image and print its digest
-        env:
-          IMAGE_TAGS: ${{ needs.test.outputs.tags }}
-        run: |
-          test -n "$IMAGE_TAGS"
-          while IFS= read -r tag; do
-            docker image tag open-notebook-mcp:test "$tag"
-            docker image push "$tag"
-          done <<< "$IMAGE_TAGS"

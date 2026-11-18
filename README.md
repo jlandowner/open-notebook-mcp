@@ -2,7 +2,7 @@
 
 <!-- mcp-name: io.github.Epochal-dev/open-notebook -->
 
-An MCP (Model Context Protocol) server that provides tools to interact with the [Open Notebook](https://github.com/lfnovo/open-notebook) API. This server enables AI assistants like Claude to manage notebooks, sources, notes, search content, and interact with AI models through Open Notebook.
+An MCP (Model Context Protocol) server that provides tools to interact with the [Open Notebook](https://github.com/lfnovo/open-notebook) API. This server enables AI assistants like Claude to manage notebooks, sources, notes, and search content through Open Notebook.
 
 ## Features
 
@@ -10,9 +10,6 @@ An MCP (Model Context Protocol) server that provides tools to interact with the 
 - **Sources Management**: Add and manage content sources (links, uploads, text)
 - **Notes Management**: Create and organize notes within notebooks
 - **Search & AI**: Search content using vector/text search and ask questions
-- **Models Management**: Configure and manage AI models
-- **Chat Sessions**: Create and manage chat conversations
-- **Settings**: Access and update application settings
 - **Progressive Disclosure**: Efficient tool discovery with `search_capabilities`
 
 ## Container deployment (Streamable HTTP)
@@ -213,47 +210,19 @@ results = search(
     limit=10
 )
 
-# List available models first
-models = list_models(limit=50)
-model_id = models["models"][0]["id"]
-
-# Ask a question
+# Ask a question using the same Open Notebook search API surface
 answer = ask_simple(
     question="What are the main AI applications mentioned?",
-    strategy_model=model_id,
-    answer_model=model_id,
-    final_answer_model=model_id,
+    strategy_model="model:default",
+    answer_model="model:default",
+    final_answer_model="model:default",
     notebook_id=notebook_id
 )
 ```
 
-#### Chat Sessions
-
-```python
-# Create a chat session
-session = create_chat_session(
-    notebook_id=notebook_id,
-    title="Research Discussion"
-)
-session_id = session["session"]["id"]
-
-# Build context
-context = get_chat_context(notebook_id=notebook_id)
-
-# Send a message
-response = execute_chat(
-    session_id=session_id,
-    message="What are the key insights from my research?",
-    context=context["context"]
-)
-
-# Get session history
-history = get_chat_session(session_id=session_id)
-```
-
 ## Available Tools
 
-The server provides 28 tools across multiple categories:
+The server provides 16 tools across multiple categories:
 
 ### Meta Tools
 
@@ -274,18 +243,6 @@ The server provides 28 tools across multiple categories:
 ### Search (3 tools)
 
 - `search`, `ask_question`, `ask_simple`
-
-### Models (4 tools)
-
-- `list_models`, `get_model`, `create_model`, `get_default_models`
-
-### Chat (6 tools)
-
-- `list_chat_sessions`, `create_chat_session`, `get_chat_session`, `update_chat_session`, `execute_chat`, `get_chat_context`
-
-### Settings (2 tools)
-
-- `get_settings`, `update_settings`
 
 ## Architecture
 
