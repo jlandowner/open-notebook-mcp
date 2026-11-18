@@ -110,15 +110,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         example={"notebook_id": "notebook:abc123", "name": "Updated Name"},
         typical_bytes=500,
     ),
-    Capability(
-        name="delete_notebook",
-        summary="Delete a notebook.",
-        tags=("notebooks", "delete", "write"),
-        args={"notebook_id": "str"},
-        returns="dict[str, Any]",
-        example={"notebook_id": "notebook:abc123"},
-        typical_bytes=100,
-    ),
     # Sources API
     Capability(
         name="list_sources",
@@ -156,15 +147,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         example={"source_id": "source:abc123", "title": "New Title"},
         typical_bytes=2000,
     ),
-    Capability(
-        name="delete_source",
-        summary="Delete a source.",
-        tags=("sources", "delete", "write"),
-        args={"source_id": "str"},
-        returns="dict[str, Any]",
-        example={"source_id": "source:abc123"},
-        typical_bytes=100,
-    ),
     # Notes API
     Capability(
         name="list_notes",
@@ -201,15 +183,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         returns="dict[str, Any]",
         example={"note_id": "note:abc123", "title": "Updated Title"},
         typical_bytes=1500,
-    ),
-    Capability(
-        name="delete_note",
-        summary="Delete a note.",
-        tags=("notes", "delete", "write"),
-        args={"note_id": "str"},
-        returns="dict[str, Any]",
-        example={"note_id": "note:abc123"},
-        typical_bytes=100,
     ),
     # Search API
     Capability(
@@ -268,15 +241,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         typical_bytes=500,
     ),
     Capability(
-        name="delete_model",
-        summary="Delete a model configuration.",
-        tags=("models", "delete", "write", "ai"),
-        args={"model_id": "str"},
-        returns="dict[str, Any]",
-        example={"model_id": "model:abc123"},
-        typical_bytes=100,
-    ),
-    Capability(
         name="get_default_models",
         summary="Get default model configurations.",
         tags=("models", "defaults", "ai"),
@@ -321,15 +285,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         returns="dict[str, Any]",
         example={"session_id": "session:abc123", "title": "Updated Title"},
         typical_bytes=500,
-    ),
-    Capability(
-        name="delete_chat_session",
-        summary="Delete a chat session.",
-        tags=("chat", "sessions", "delete", "write"),
-        args={"session_id": "str"},
-        returns="dict[str, Any]",
-        example={"session_id": "session:abc123"},
-        typical_bytes=100,
     ),
     Capability(
         name="execute_chat",
@@ -449,7 +404,7 @@ async def make_request(
     """Make an HTTP request to the Open Notebook API.
     
     Args:
-        method: HTTP method (GET, POST, PUT, DELETE)
+        method: HTTP method (GET, POST, PUT)
         endpoint: API endpoint path (e.g., '/api/notebooks')
         json_data: Optional JSON body for POST/PUT requests
         params: Optional query parameters
@@ -476,8 +431,6 @@ async def make_request(
                 r = await client.post(url, headers=headers, json=json_data, params=params)
             elif method == "PUT":
                 r = await client.put(url, headers=headers, json=json_data, params=params)
-            elif method == "DELETE":
-                r = await client.delete(url, headers=headers, params=params)
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
             
@@ -612,22 +565,6 @@ async def update_notebook(
         "notebook": notebook,
     }
 
-@mcp.tool()
-async def delete_notebook(notebook_id: str) -> dict[str, Any]:
-    """Delete a notebook.
-    
-    Args:
-        notebook_id: Notebook ID
-    
-    Returns:
-        Success message
-    """
-    result = await make_request("DELETE", f"/api/notebooks/{notebook_id}")
-    return {
-        "request_id": generate_request_id(),
-        "result": result,
-    }
-
 # -----------------------------
 # Sources API Tools
 # -----------------------------
@@ -740,22 +677,6 @@ async def update_source(
         "source": source,
     }
 
-@mcp.tool()
-async def delete_source(source_id: str) -> dict[str, Any]:
-    """Delete a source.
-    
-    Args:
-        source_id: Source ID
-    
-    Returns:
-        Success message
-    """
-    result = await make_request("DELETE", f"/api/sources/{source_id}")
-    return {
-        "request_id": generate_request_id(),
-        "result": result,
-    }
-
 # -----------------------------
 # Notes API Tools
 # -----------------------------
@@ -866,22 +787,6 @@ async def update_note(
     return {
         "request_id": generate_request_id(),
         "note": note,
-    }
-
-@mcp.tool()
-async def delete_note(note_id: str) -> dict[str, Any]:
-    """Delete a note.
-    
-    Args:
-        note_id: Note ID
-    
-    Returns:
-        Success message
-    """
-    result = await make_request("DELETE", f"/api/notes/{note_id}")
-    return {
-        "request_id": generate_request_id(),
-        "result": result,
     }
 
 # -----------------------------
@@ -1058,22 +963,6 @@ async def create_model(name: str, provider: str, type: str) -> dict[str, Any]:
     }
 
 @mcp.tool()
-async def delete_model(model_id: str) -> dict[str, Any]:
-    """Delete a model configuration.
-    
-    Args:
-        model_id: Model ID
-    
-    Returns:
-        Success message
-    """
-    result = await make_request("DELETE", f"/api/models/{model_id}")
-    return {
-        "request_id": generate_request_id(),
-        "result": result,
-    }
-
-@mcp.tool()
 async def get_default_models() -> dict[str, Any]:
     """Get default model configurations.
     
@@ -1180,22 +1069,6 @@ async def update_chat_session(
     return {
         "request_id": generate_request_id(),
         "session": session,
-    }
-
-@mcp.tool()
-async def delete_chat_session(session_id: str) -> dict[str, Any]:
-    """Delete a chat session.
-    
-    Args:
-        session_id: Session ID
-    
-    Returns:
-        Success message
-    """
-    result = await make_request("DELETE", f"/api/chat/sessions/{session_id}")
-    return {
-        "request_id": generate_request_id(),
-        "result": result,
     }
 
 @mcp.tool()
