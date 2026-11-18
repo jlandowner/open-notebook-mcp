@@ -12,7 +12,6 @@ from open_notebook_mcp.server import (
     search_capabilities,
     list_notebooks,
     create_notebook,
-    list_models,
 )
 
 
@@ -67,20 +66,6 @@ async def main():
     except Exception as e:
         print(f"  ⚠️  Could not connect: {e}")
         print(f"  Make sure Open Notebook is running at {base_url}")
-    print()
-    
-    # Example 5: List models (requires Open Notebook to be running)
-    print("--- Example 5: List AI Models ---")
-    try:
-        result = await list_models(limit=5)
-        print(f"Found {result['count']} models")
-        if result['models']:
-            for model in result['models'][:3]:
-                print(f"  - {model.get('name', 'Unnamed')}: {model.get('provider', 'Unknown provider')}")
-        else:
-            print("  (No models configured)")
-    except Exception as e:
-        print(f"  ⚠️  Could not connect: {e}")
     print()
     
     print("=== Examples Complete ===")

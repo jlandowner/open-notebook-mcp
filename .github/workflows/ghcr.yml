@@ -1,0 +1,29 @@
+name: Test container
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+      - name: Test with locked dependencies
+        run: uv run --frozen pytest -q
+      - name: Build image for testing
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: open-notebook-mcp:test
+      - name: Test real container and authenticated MCP over HTTP
+        run: python scripts/container_e2e.py

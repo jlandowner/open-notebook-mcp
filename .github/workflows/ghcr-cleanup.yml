@@ -1,0 +1,87 @@
+name: Cleanup old GHCR images
+
+on:
+  schedule:
+    - cron: "30 2 * * 0"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete old non-release image versions
+        uses: actions/github-script@v8
+        with:
+          script: |
+            const owner = context.repo.owner;
+            const packageName = context.repo.repo;
+            const packageType = "container";
+            const keepNonRelease = 10;
+            const releaseTagRegex = /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
+
+            const listVersions = async (scope) => {
+              if (scope === "user") {
+                return github.paginate("GET /users/{username}/packages/{package_type}/{package_name}/versions", {
+                  username: owner,
+                  package_type: packageType,
+                  package_name: packageName,
+                  per_page: 100,
+                });
+              }
+              return github.paginate("GET /orgs/{org}/packages/{package_type}/{package_name}/versions", {
+                org: owner,
+                package_type: packageType,
+                package_name: packageName,
+                per_page: 100,
+              });
+            };
+
+            const deleteVersion = async (scope, versionId) => {
+              if (scope === "user") {
+                await github.request("DELETE /users/{username}/packages/{package_type}/{package_name}/versions/{package_version_id}", {
+                  username: owner,
+                  package_type: packageType,
+                  package_name: packageName,
+                  package_version_id: versionId,
+                });
+                return;
+              }
+              await github.request("DELETE /orgs/{org}/packages/{package_type}/{package_name}/versions/{package_version_id}", {
+                org: owner,
+                package_type: packageType,
+                package_name: packageName,
+                package_version_id: versionId,
+              });
+            };
+
+            let scope = "user";
+            let versions;
+            try {
+              versions = await listVersions(scope);
+            } catch (error) {
+              if (error.status !== 404) throw error;
+              scope = "org";
+              versions = await listVersions(scope);
+            }
+
+            versions.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            const nonReleaseVersions = versions.filter((version) => {
+              const tags = version.metadata?.container?.tags ?? [];
+              return !tags.some((tag) => releaseTagRegex.test(tag));
+            });
+
+            const deleteTargets = nonReleaseVersions.slice(keepNonRelease);
+            core.info(
+              `Found ${versions.length} versions (${nonReleaseVersions.length} non-release). ` +
+              `Deleting ${deleteTargets.length} old non-release versions; keeping newest ${keepNonRelease}.`
+            );
+
+            for (const version of deleteTargets) {
+              const tags = version.metadata?.container?.tags ?? [];
+              core.info(`Deleting version ${version.id} tags=${JSON.stringify(tags)}`);
+              await deleteVersion(scope, version.id);
+            }

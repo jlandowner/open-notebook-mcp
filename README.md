@@ -2,19 +2,24 @@
 
 <!-- mcp-name: io.github.Epochal-dev/open-notebook -->
 
-An MCP (Model Context Protocol) server that provides tools to interact with the [Open Notebook](https://github.com/lfnovo/open-notebook) API. This server enables AI assistants like Claude to manage notebooks, sources, notes, search content, and interact with AI models through Open Notebook.
+An MCP (Model Context Protocol) server that provides tools to interact with the [Open Notebook](https://github.com/lfnovo/open-notebook) API. This server enables AI assistants like Claude to manage notebooks, sources, notes, and search content through Open Notebook.
 
 ## Features
 
-- **Notebooks Management**: Create, read, update, and delete notebooks
+- **Notebooks Management**: Create, read, and update notebooks
 - **Sources Management**: Add and manage content sources (links, uploads, text)
 - **Notes Management**: Create and organize notes within notebooks
 - **Search & AI**: Search content using vector/text search and ask questions
-- **Models Management**: Configure and manage AI models
-- **Chat Sessions**: Create and manage chat conversations
-- **Settings**: Access and update application settings
 - **Progressive Disclosure**: Efficient tool discovery with `search_capabilities`
 - **Write Guardrails**: Notebook write operations are blocked unless notebook IDs are explicitly allowlisted
+
+## Container deployment (Streamable HTTP)
+
+Run the server using a prebuilt GHCR image with dependencies included. See [DEPLOYMENT.md](DEPLOYMENT.md) for Docker execution, runtime configuration, and CI verification.
+
+Streamable HTTP requires `MCP_AUTH_TOKEN` at startup and validates Bearer authentication on **every** MCP request. `MCP_ALLOWED_HOSTS` restricts accepted Host headers and requests with an Origin are denied unless explicitly allowed using `MCP_ALLOWED_ORIGINS`. The default `stdio` transport remains available without HTTP authentication.
+
+This is static Bearer authentication for a restricted HTTP endpoint, not an OAuth 2.1 implementation. Keep the Open Notebook REST API password separate from the MCP client Bearer token.
 
 ## Installation
 
@@ -220,79 +225,39 @@ results = search(
     limit=10
 )
 
-# List available models first
-models = list_models(limit=50)
-model_id = models["models"][0]["id"]
-
-# Ask a question
+# Ask a question using the same Open Notebook search API surface
 answer = ask_simple(
     question="What are the main AI applications mentioned?",
-    strategy_model=model_id,
-    answer_model=model_id,
-    final_answer_model=model_id,
+    strategy_model="model:default",
+    answer_model="model:default",
+    final_answer_model="model:default",
     notebook_id=notebook_id
 )
 ```
 
-#### Chat Sessions
-
-```python
-# Create a chat session
-session = create_chat_session(
-    notebook_id=notebook_id,
-    title="Research Discussion"
-)
-session_id = session["session"]["id"]
-
-# Build context
-context = get_chat_context(notebook_id=notebook_id)
-
-# Send a message
-response = execute_chat(
-    session_id=session_id,
-    message="What are the key insights from my research?",
-    context=context["context"]
-)
-
-# Get session history
-history = get_chat_session(session_id=session_id)
-```
-
 ## Available Tools
 
-The server provides 39 tools across multiple categories:
+The server provides 16 tools across multiple categories:
 
 ### Meta Tools
 
 - `search_capabilities` - Progressive tool discovery
 
-### Notebooks (5 tools)
+### Notebooks (4 tools)
 
-- `list_notebooks`, `get_notebook`, `create_notebook`, `update_notebook`, `delete_notebook`
+- `list_notebooks`, `get_notebook`, `create_notebook`, `update_notebook`
 
-### Sources (5 tools)
+### Sources (4 tools)
 
-- `list_sources`, `get_source`, `create_source`, `update_source`, `delete_source`
+- `list_sources`, `get_source`, `create_source`, `update_source`
 
-### Notes (5 tools)
+### Notes (4 tools)
 
-- `list_notes`, `get_note`, `create_note`, `update_note`, `delete_note`
+- `list_notes`, `get_note`, `create_note`, `update_note`
 
 ### Search (3 tools)
 
 - `search`, `ask_question`, `ask_simple`
-
-### Models (5 tools)
-
-- `list_models`, `get_model`, `create_model`, `delete_model`, `get_default_models`
-
-### Chat (7 tools)
-
-- `list_chat_sessions`, `create_chat_session`, `get_chat_session`, `update_chat_session`, `delete_chat_session`, `execute_chat`, `get_chat_context`
-
-### Settings (2 tools)
-
-- `get_settings`, `update_settings`
 
 ## Architecture
 
