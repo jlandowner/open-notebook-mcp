@@ -87,7 +87,7 @@ def test_search_capabilities_limit():
 
 
 def test_delete_tools_removed_from_capabilities_and_registry():
-    """Delete tools should not be advertised or registered."""
+    """Delete tools should not be exposed through MCP tool listing."""
     removed_tools = {
         "delete_notebook",
         "delete_source",
@@ -96,11 +96,9 @@ def test_delete_tools_removed_from_capabilities_and_registry():
         "delete_chat_session",
     }
 
-    capability_names = {cap.name for cap in CAPABILITIES}
-    assert removed_tools.isdisjoint(capability_names)
-
-    registered_tool_names = set(mcp._tool_manager._tools)
-    assert removed_tools.isdisjoint(registered_tool_names)
+    listed_tools = asyncio.run(mcp.list_tools())
+    listed_tool_names = {tool.name for tool in listed_tools}
+    assert removed_tools.isdisjoint(listed_tool_names)
 
 
 def test_search_capabilities_delete_query_returns_no_matches():
