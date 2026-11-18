@@ -222,23 +222,23 @@ answer = ask_simple(
 
 ## Available Tools
 
-The server provides 19 tools across multiple categories:
+The server provides 16 tools across multiple categories:
 
 ### Meta Tools
 
 - `search_capabilities` - Progressive tool discovery
 
-### Notebooks (5 tools)
+### Notebooks (4 tools)
 
-- `list_notebooks`, `get_notebook`, `create_notebook`, `update_notebook`, `delete_notebook`
+- `list_notebooks`, `get_notebook`, `create_notebook`, `update_notebook`
 
-### Sources (5 tools)
+### Sources (4 tools)
 
-- `list_sources`, `get_source`, `create_source`, `update_source`, `delete_source`
+- `list_sources`, `get_source`, `create_source`, `update_source`
 
-### Notes (5 tools)
+### Notes (4 tools)
 
-- `list_notes`, `get_note`, `create_note`, `update_note`, `delete_note`
+- `list_notes`, `get_note`, `create_note`, `update_note`
 
 ### Search (3 tools)
 
