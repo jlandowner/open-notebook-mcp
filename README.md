@@ -347,9 +347,9 @@ To add new tools:
 
 ## Requirements
 
-- Python 3.12+
+- Python 3.14+
 - Open Notebook instance (local or remote)
-- Dependencies: `mcp[cli]>=1.23.2`, `httpx>=0.28.1`
+- Dependencies: `mcp[cli]>=2,<3`, `httpx>=0.28.1`
 
 ## Contributing
 
@@ -369,7 +369,7 @@ See LICENSE file for details.
 - [Open Notebook](https://github.com/lfnovo/open-notebook)
 - [Open Notebook API Reference](https://github.com/lfnovo/open-notebook/blob/main/docs/development/api-reference.md)
 - [Model Context Protocol](https://modelcontextprotocol.io/)
-- [FastMCP Documentation](https://gofastmcp.com/)
+- [MCP Python SDK Documentation](https://py.sdk.modelcontextprotocol.io/)
 
 ## Support
 

@@ -90,24 +90,18 @@ def test_no_wildcard_hosts():
 def test_actual_mcp_initialize_list_and_call(monkeypatch):
     """Exercise the HTTP entry point with allowlisted reverse proxy headers."""
     import uvicorn
-    from mcp.server.transport_security import TransportSecuritySettings
 
-    from open_notebook_mcp.server import main, mcp
+    from open_notebook_mcp.server import main
 
     monkeypatch.setenv("MCP_TRANSPORT", "streamable-http")
     monkeypatch.setenv("MCP_AUTH_TOKEN", "secret-token")
     monkeypatch.setenv("MCP_ALLOWED_HOSTS", "mcp.example.org")
     monkeypatch.setenv("MCP_ALLOWED_ORIGINS", "https://client.example.org")
-    monkeypatch.setattr(mcp.settings, "host", "127.0.0.1")
-    monkeypatch.setattr(
-        mcp.settings,
-        "transport_security",
-        TransportSecuritySettings(
-            enable_dns_rebinding_protection=True,
-            allowed_hosts=["127.0.0.1:*"],
-            allowed_origins=["http://127.0.0.1:*"],
-        ),
-    )
+    monkeypatch.setenv("HOST", "127.0.0.1")
+    monkeypatch.setenv("PORT", "8000")
+    monkeypatch.setenv("MCP_PATH", "/mcp")
+    monkeypatch.setenv("STATELESS_HTTP", "1")
+    monkeypatch.setenv("JSON_RESPONSE", "1")
     headers = {
         "Authorization": "Bearer secret-token",
         "Content-Type": "application/json",

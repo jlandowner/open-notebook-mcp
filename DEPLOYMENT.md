@@ -45,7 +45,7 @@ runtime. For another hostname, update `MCP_ALLOWED_HOSTS` accordingly.
 | `MCP_TRANSPORT` | `stdio` (default outside Docker) or `streamable-http` |
 | `MCP_AUTH_TOKEN` | Required and nonempty for HTTP; fails before binding when absent |
 | `HOST`, `PORT`, `MCP_PATH` | HTTP bind and Streamable HTTP path; Docker defaults: `0.0.0.0`, `8000`, `/mcp` |
-| `STATELESS_HTTP`, `JSON_RESPONSE` | FastMCP mode; Docker defaults to `1` |
+| `STATELESS_HTTP`, `JSON_RESPONSE` | MCP HTTP response mode; Docker defaults to `1` |
 | `MCP_ALLOWED_HOSTS` | Explicit Host allowlist (CSV); include the DNS names clients use |
 | `MCP_ALLOWED_ORIGINS` | Optional exact `Origin` allowlist (CSV); by default all requests with an Origin header are rejected |
 | `OPEN_NOTEBOOK_URL` | Open Notebook REST API endpoint |
