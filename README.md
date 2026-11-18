@@ -15,6 +15,14 @@ An MCP (Model Context Protocol) server that provides tools to interact with the 
 - **Settings**: Access and update application settings
 - **Progressive Disclosure**: Efficient tool discovery with `search_capabilities`
 
+## Container deployment (Streamable HTTP)
+
+Run the server using a prebuilt GHCR image with dependencies included. See [DEPLOYMENT.md](DEPLOYMENT.md) for Docker execution, runtime configuration, and CI verification.
+
+Streamable HTTP requires `MCP_AUTH_TOKEN` at startup and validates Bearer authentication on **every** MCP request. `MCP_ALLOWED_HOSTS` restricts accepted Host headers and requests with an Origin are denied unless explicitly allowed using `MCP_ALLOWED_ORIGINS`. The default `stdio` transport remains available without HTTP authentication.
+
+This is static Bearer authentication for a restricted HTTP endpoint, not an OAuth 2.1 implementation. Keep the Open Notebook REST API password separate from the MCP client Bearer token.
+
 ## Installation
 
 ### Using uv (recommended)
