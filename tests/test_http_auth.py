@@ -1,5 +1,7 @@
 """Contract tests for the Streamable HTTP authentication boundary."""
 
+from unittest.mock import Mock
+
 import pytest
 from starlette.applications import Starlette
 from starlette.responses import JSONResponse
@@ -85,23 +87,45 @@ def test_no_wildcard_hosts():
         authenticated_mcp_app(Starlette(), "secret-token", allowed_hosts=["*"])
 
 
-def test_actual_mcp_initialize_list_and_call():
-    """Exercise the real stateless SDK endpoint, not just a fake Starlette route."""
-    from open_notebook_mcp.server import mcp
+def test_actual_mcp_initialize_list_and_call(monkeypatch):
+    """Exercise the HTTP entry point with allowlisted reverse proxy headers."""
+    import uvicorn
+    from mcp.server.transport_security import TransportSecuritySettings
 
-    app = authenticated_mcp_app(
-        mcp.streamable_http_app(),
-        "secret-token",
-        allowed_hosts=["127.0.0.1"],
+    from open_notebook_mcp.server import main, mcp
+
+    monkeypatch.setenv("MCP_TRANSPORT", "streamable-http")
+    monkeypatch.setenv("MCP_AUTH_TOKEN", "secret-token")
+    monkeypatch.setenv("MCP_ALLOWED_HOSTS", "mcp.example.org")
+    monkeypatch.setenv("MCP_ALLOWED_ORIGINS", "https://client.example.org")
+    monkeypatch.setattr(mcp.settings, "host", "127.0.0.1")
+    monkeypatch.setattr(
+        mcp.settings,
+        "transport_security",
+        TransportSecuritySettings(
+            enable_dns_rebinding_protection=True,
+            allowed_hosts=["127.0.0.1:*"],
+            allowed_origins=["http://127.0.0.1:*"],
+        ),
     )
     headers = {
         "Authorization": "Bearer secret-token",
         "Content-Type": "application/json",
         "Accept": "application/json, text/event-stream",
+        "Origin": "https://client.example.org",
     }
-    # The MCP SDK's localhost DNS-rebinding protection requires Host to include a port.
-    # Starlette TrustedHostMiddleware validates the hostname independently.
-    with TestClient(app, base_url="http://127.0.0.1:8000") as client:
+
+    run = Mock()
+    monkeypatch.setattr(uvicorn, "run", run)
+    main()
+    run.assert_called_once()
+    assert run.call_args.kwargs["host"] == "127.0.0.1"
+    app = run.call_args.args[0]
+
+    with TestClient(app, base_url="https://mcp.example.org") as client:
+        assert client.post("/mcp", headers={**headers, "Host": "other.example.org"}).status_code == 400
+        assert client.post("/mcp", headers={**headers, "Origin": "https://other.example.org"}).status_code == 403
+
         def call(method, request_id, params=None):
             result = client.post(
                 "/mcp",

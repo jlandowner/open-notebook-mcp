@@ -9,6 +9,7 @@ from typing import Any, Literal, Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("open-notebook-mcp")
@@ -1303,6 +1304,11 @@ def main() -> None:
     import uvicorn
 
     token = require_auth_token()
+    # The outer middleware enforces the configured Host and Origin allowlists.
+    # FastMCP's loopback defaults would also reject requests allowed by that policy.
+    mcp.settings.transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=False,
+    )
     app = authenticated_mcp_app(mcp.streamable_http_app(), token)
     uvicorn.run(app, host=mcp.settings.host, port=mcp.settings.port, log_level="info")
 
