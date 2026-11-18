@@ -5,10 +5,16 @@ runtime package installation or persistent volume is required.
 
 ## Build and release
 
-A pull request runs Python tests, builds the image, and runs container E2E tests
-without publishing. A push to `main` publishes
-`ghcr.io/jlandowner/open-notebook-mcp:main` and a `sha-...` tag after verification.
-Tags matching `v*` publish a semver tag. Use the immutable
+A pull request and push to `main` run Python tests, build the image, and run
+container E2E tests without publishing. GHCR publication is intentionally
+separated into a dedicated workflow and runs only for tags matching `v*` or a
+manual workflow dispatch.
+
+Published images keep semver release tags (for `v*` releases, e.g. `1.2.3`) for deploy/rollback. A weekly
+cleanup workflow keeps only the newest 10 non-release image versions and removes
+older non-release versions automatically.
+
+Use the immutable
 `ghcr.io/jlandowner/open-notebook-mcp@sha256:<actual-digest>` output by the publish
 job for deployments. The existing MCP Registry/PyPI workflow is unchanged.
 
