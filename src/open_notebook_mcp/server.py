@@ -9,11 +9,19 @@ from typing import Any, Literal, Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.server.transport_security import TransportSecuritySettings
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("open-notebook-mcp")
 
-mcp = FastMCP("open-notebook-mcp")
+mcp = FastMCP(
+    "open-notebook-mcp",
+    host=os.getenv("HOST", "127.0.0.1"),
+    port=int(os.getenv("PORT", "8000")),
+    streamable_http_path=os.getenv("MCP_PATH", "/mcp"),
+    stateless_http=os.getenv("STATELESS_HTTP", "1") == "1",
+    json_response=os.getenv("JSON_RESPONSE", "1") == "1",
+)
 
 # -----------------------------
 # Configuration and Constants
@@ -102,15 +110,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         example={"notebook_id": "notebook:abc123", "name": "Updated Name"},
         typical_bytes=500,
     ),
-    Capability(
-        name="delete_notebook",
-        summary="Delete a notebook.",
-        tags=("notebooks", "delete", "write"),
-        args={"notebook_id": "str"},
-        returns="dict[str, Any]",
-        example={"notebook_id": "notebook:abc123"},
-        typical_bytes=100,
-    ),
     # Sources API
     Capability(
         name="list_sources",
@@ -147,15 +146,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         returns="dict[str, Any]",
         example={"source_id": "source:abc123", "title": "New Title"},
         typical_bytes=2000,
-    ),
-    Capability(
-        name="delete_source",
-        summary="Delete a source.",
-        tags=("sources", "delete", "write"),
-        args={"source_id": "str"},
-        returns="dict[str, Any]",
-        example={"source_id": "source:abc123"},
-        typical_bytes=100,
     ),
     # Notes API
     Capability(
@@ -194,15 +184,6 @@ CAPABILITIES: tuple[Capability, ...] = (
         example={"note_id": "note:abc123", "title": "Updated Title"},
         typical_bytes=1500,
     ),
-    Capability(
-        name="delete_note",
-        summary="Delete a note.",
-        tags=("notes", "delete", "write"),
-        args={"note_id": "str"},
-        returns="dict[str, Any]",
-        example={"note_id": "note:abc123"},
-        typical_bytes=100,
-    ),
     # Search API
     Capability(
         name="search",
@@ -231,7 +212,121 @@ CAPABILITIES: tuple[Capability, ...] = (
         example={"question": "Summarize my AI research", "strategy_model": "model:abc", "answer_model": "model:abc", "final_answer_model": "model:abc"},
         typical_bytes=4000,
     ),
+<<<<<<< HEAD
     # Search API remains the AI-assisted content retrieval surface; models/chat/settings are intentionally excluded from the public MCP tool list.
+=======
+    # Models API
+    Capability(
+        name="list_models",
+        summary="Get all configured AI models.",
+        tags=("models", "list", "ai"),
+        args={"limit": "int"},
+        returns="dict[str, Any]",
+        example={"limit": 50},
+        typical_bytes=2000,
+    ),
+    Capability(
+        name="get_model",
+        summary="Get a specific model by ID.",
+        tags=("models", "get", "read", "ai"),
+        args={"model_id": "str"},
+        returns="dict[str, Any]",
+        example={"model_id": "model:abc123"},
+        typical_bytes=500,
+    ),
+    Capability(
+        name="create_model",
+        summary="Create a new AI model configuration.",
+        tags=("models", "create", "write", "ai"),
+        args={"name": "str", "provider": "str", "type": "str"},
+        returns="dict[str, Any]",
+        example={"name": "gpt-4", "provider": "openai", "type": "language"},
+        typical_bytes=500,
+    ),
+    Capability(
+        name="get_default_models",
+        summary="Get default model configurations.",
+        tags=("models", "defaults", "ai"),
+        args={},
+        returns="dict[str, Any]",
+        example={},
+        typical_bytes=1000,
+    ),
+    # Chat API
+    Capability(
+        name="list_chat_sessions",
+        summary="Get all chat sessions with optional filtering.",
+        tags=("chat", "sessions", "list"),
+        args={"notebook_id": "Optional[str]", "limit": "int"},
+        returns="dict[str, Any]",
+        example={"notebook_id": "notebook:abc123", "limit": 20},
+        typical_bytes=2000,
+    ),
+    Capability(
+        name="create_chat_session",
+        summary="Create a new chat session.",
+        tags=("chat", "sessions", "create", "write"),
+        args={"notebook_id": "str", "title": "str"},
+        returns="dict[str, Any]",
+        example={"notebook_id": "notebook:abc123", "title": "Research Discussion"},
+        typical_bytes=500,
+    ),
+    Capability(
+        name="get_chat_session",
+        summary="Get a specific chat session by ID.",
+        tags=("chat", "sessions", "get", "read"),
+        args={"session_id": "str"},
+        returns="dict[str, Any]",
+        example={"session_id": "session:abc123"},
+        typical_bytes=3000,
+    ),
+    Capability(
+        name="update_chat_session",
+        summary="Update a chat session.",
+        tags=("chat", "sessions", "update", "write"),
+        args={"session_id": "str", "title": "Optional[str]"},
+        returns="dict[str, Any]",
+        example={"session_id": "session:abc123", "title": "Updated Title"},
+        typical_bytes=500,
+    ),
+    Capability(
+        name="execute_chat",
+        summary="Send a message in a chat session.",
+        tags=("chat", "execute", "message", "ai"),
+        args={"session_id": "str", "message": "str", "context": "Optional[dict]"},
+        returns="dict[str, Any]",
+        example={"session_id": "session:abc123", "message": "What are the key insights?"},
+        typical_bytes=3000,
+    ),
+    Capability(
+        name="get_chat_context",
+        summary="Build context for a chat conversation.",
+        tags=("chat", "context", "build"),
+        args={"notebook_id": "str", "context_config": "Optional[dict]"},
+        returns="dict[str, Any]",
+        example={"notebook_id": "notebook:abc123"},
+        typical_bytes=5000,
+    ),
+    # Settings API
+    Capability(
+        name="get_settings",
+        summary="Get application settings.",
+        tags=("settings", "get", "config"),
+        args={},
+        returns="dict[str, Any]",
+        example={},
+        typical_bytes=1000,
+    ),
+    Capability(
+        name="update_settings",
+        summary="Update application settings.",
+        tags=("settings", "update", "write", "config"),
+        args={"settings": "dict"},
+        returns="dict[str, Any]",
+        example={"settings": {"theme": "dark"}},
+        typical_bytes=1000,
+    ),
+>>>>>>> origin/main
 )
 
 def _normalize(s: str) -> str:
@@ -313,7 +408,7 @@ async def make_request(
     """Make an HTTP request to the Open Notebook API.
     
     Args:
-        method: HTTP method (GET, POST, PUT, DELETE)
+        method: HTTP method (GET, POST, PUT)
         endpoint: API endpoint path (e.g., '/api/notebooks')
         json_data: Optional JSON body for POST/PUT requests
         params: Optional query parameters
@@ -340,8 +435,6 @@ async def make_request(
                 r = await client.post(url, headers=headers, json=json_data, params=params)
             elif method == "PUT":
                 r = await client.put(url, headers=headers, json=json_data, params=params)
-            elif method == "DELETE":
-                r = await client.delete(url, headers=headers, params=params)
             else:
                 raise ValueError(f"Unsupported HTTP method: {method}")
             
@@ -476,22 +569,6 @@ async def update_notebook(
         "notebook": notebook,
     }
 
-@mcp.tool()
-async def delete_notebook(notebook_id: str) -> dict[str, Any]:
-    """Delete a notebook.
-    
-    Args:
-        notebook_id: Notebook ID
-    
-    Returns:
-        Success message
-    """
-    result = await make_request("DELETE", f"/api/notebooks/{notebook_id}")
-    return {
-        "request_id": generate_request_id(),
-        "result": result,
-    }
-
 # -----------------------------
 # Sources API Tools
 # -----------------------------
@@ -602,22 +679,6 @@ async def update_source(
     return {
         "request_id": generate_request_id(),
         "source": source,
-    }
-
-@mcp.tool()
-async def delete_source(source_id: str) -> dict[str, Any]:
-    """Delete a source.
-    
-    Args:
-        source_id: Source ID
-    
-    Returns:
-        Success message
-    """
-    result = await make_request("DELETE", f"/api/sources/{source_id}")
-    return {
-        "request_id": generate_request_id(),
-        "result": result,
     }
 
 # -----------------------------
@@ -732,22 +793,6 @@ async def update_note(
         "note": note,
     }
 
-@mcp.tool()
-async def delete_note(note_id: str) -> dict[str, Any]:
-    """Delete a note.
-    
-    Args:
-        note_id: Note ID
-    
-    Returns:
-        Success message
-    """
-    result = await make_request("DELETE", f"/api/notes/{note_id}")
-    return {
-        "request_id": generate_request_id(),
-        "result": result,
-    }
-
 # -----------------------------
 # Search API Tools
 # -----------------------------
@@ -856,33 +901,297 @@ async def ask_simple(
     }
 
 # -----------------------------
+<<<<<<< HEAD
+=======
+# Models API Tools
+# -----------------------------
+
+@mcp.tool()
+async def list_models(limit: int = 50) -> dict[str, Any]:
+    """Get all configured AI models.
+    
+    Args:
+        limit: Maximum number of results (1-100)
+    
+    Returns:
+        Dictionary with models list and metadata
+    """
+    limit = max(1, min(limit, MAX_LIMIT))
+    models = await make_request("GET", "/api/models")
+    
+    if isinstance(models, list):
+        models = models[:limit]
+    
+    return {
+        "request_id": generate_request_id(),
+        "count": len(models) if isinstance(models, list) else 0,
+        "models": models,
+    }
+
+@mcp.tool()
+async def get_model(model_id: str) -> dict[str, Any]:
+    """Get a specific model by ID.
+    
+    Args:
+        model_id: Model ID (e.g., 'model:abc123')
+    
+    Returns:
+        Model details
+    """
+    model = await make_request("GET", f"/api/models/{model_id}")
+    return {
+        "request_id": generate_request_id(),
+        "model": model,
+    }
+
+@mcp.tool()
+async def create_model(name: str, provider: str, type: str) -> dict[str, Any]:
+    """Create a new AI model configuration.
+    
+    Args:
+        name: Model name (e.g., 'gpt-4', 'claude-3-opus')
+        provider: Provider name (e.g., 'openai', 'anthropic')
+        type: Model type (e.g., 'language', 'embedding')
+    
+    Returns:
+        Created model details
+    """
+    data = {
+        "name": name,
+        "provider": provider,
+        "type": type,
+    }
+    
+    model = await make_request("POST", "/api/models", json_data=data)
+    return {
+        "request_id": generate_request_id(),
+        "model": model,
+    }
+
+@mcp.tool()
+async def get_default_models() -> dict[str, Any]:
+    """Get default model configurations.
+    
+    Returns:
+        Default models configuration
+    """
+    defaults = await make_request("GET", "/api/models/defaults")
+    return {
+        "request_id": generate_request_id(),
+        "defaults": defaults,
+    }
+
+# -----------------------------
+# Chat API Tools
+# -----------------------------
+
+@mcp.tool()
+async def list_chat_sessions(
+    notebook_id: Optional[str] = None,
+    limit: int = 20,
+) -> dict[str, Any]:
+    """Get all chat sessions with optional filtering.
+    
+    Args:
+        notebook_id: Optional notebook ID to filter by
+        limit: Maximum number of results (1-100)
+    
+    Returns:
+        Dictionary with sessions list and metadata
+    """
+    limit = max(1, min(limit, MAX_LIMIT))
+    params = {}
+    if notebook_id is not None:
+        params["notebook_id"] = notebook_id
+    
+    sessions = await make_request("GET", "/api/chat/sessions", params=params)
+    
+    if isinstance(sessions, list):
+        sessions = sessions[:limit]
+    
+    return {
+        "request_id": generate_request_id(),
+        "count": len(sessions) if isinstance(sessions, list) else 0,
+        "sessions": sessions,
+    }
+
+@mcp.tool()
+async def create_chat_session(notebook_id: str, title: str) -> dict[str, Any]:
+    """Create a new chat session.
+    
+    Args:
+        notebook_id: Notebook ID for the session
+        title: Session title
+    
+    Returns:
+        Created session details
+    """
+    data = {
+        "notebook_id": notebook_id,
+        "title": title,
+    }
+    
+    session = await make_request("POST", "/api/chat/sessions", json_data=data)
+    return {
+        "request_id": generate_request_id(),
+        "session": session,
+    }
+
+@mcp.tool()
+async def get_chat_session(session_id: str) -> dict[str, Any]:
+    """Get a specific chat session by ID.
+    
+    Args:
+        session_id: Session ID (e.g., 'session:abc123')
+    
+    Returns:
+        Session details with message history
+    """
+    session = await make_request("GET", f"/api/chat/sessions/{session_id}")
+    return {
+        "request_id": generate_request_id(),
+        "session": session,
+    }
+
+@mcp.tool()
+async def update_chat_session(
+    session_id: str,
+    title: Optional[str] = None,
+) -> dict[str, Any]:
+    """Update a chat session.
+    
+    Args:
+        session_id: Session ID
+        title: Optional new title
+    
+    Returns:
+        Updated session details
+    """
+    data = {}
+    if title is not None:
+        data["title"] = title
+    
+    session = await make_request("PUT", f"/api/chat/sessions/{session_id}", json_data=data)
+    return {
+        "request_id": generate_request_id(),
+        "session": session,
+    }
+
+@mcp.tool()
+async def execute_chat(
+    session_id: str,
+    message: str,
+    context: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Send a message in a chat session.
+    
+    Args:
+        session_id: Session ID
+        message: Message to send
+        context: Optional context data for the conversation
+    
+    Returns:
+        Chat response with AI message
+    """
+    data = {
+        "session_id": session_id,
+        "message": message,
+    }
+    if context is not None:
+        data["context"] = context
+    
+    response = await make_request("POST", "/api/chat/execute", json_data=data)
+    return {
+        "request_id": generate_request_id(),
+        "response": response,
+    }
+
+@mcp.tool()
+async def get_chat_context(
+    notebook_id: str,
+    context_config: Optional[dict[str, Any]] = None,
+) -> dict[str, Any]:
+    """Build context for a chat conversation.
+    
+    Args:
+        notebook_id: Notebook ID
+        context_config: Optional context configuration
+    
+    Returns:
+        Built context data
+    """
+    data = {
+        "notebook_id": notebook_id,
+    }
+    if context_config is not None:
+        data["context_config"] = context_config
+    
+    context = await make_request("POST", "/api/chat/context", json_data=data)
+    return {
+        "request_id": generate_request_id(),
+        "context": context,
+    }
+
+# -----------------------------
+# Settings API Tools
+# -----------------------------
+
+@mcp.tool()
+async def get_settings() -> dict[str, Any]:
+    """Get application settings.
+    
+    Returns:
+        Application settings
+    """
+    settings = await make_request("GET", "/api/settings")
+    return {
+        "request_id": generate_request_id(),
+        "settings": settings,
+    }
+
+@mcp.tool()
+async def update_settings(settings: dict[str, Any]) -> dict[str, Any]:
+    """Update application settings.
+    
+    Args:
+        settings: Settings dictionary to update
+    
+    Returns:
+        Updated settings
+    """
+    result = await make_request("PUT", "/api/settings", json_data=settings)
+    return {
+        "request_id": generate_request_id(),
+        "settings": result,
+    }
+
+# -----------------------------
+>>>>>>> origin/main
 # Dual transport entrypoint
 # -----------------------------
 
 def main() -> None:
-    """Main entry point for the MCP server."""
-    # Default: stdio (Codex/local)
+    """Run the stdio server or the authenticated HTTP ASGI application."""
     transport = os.getenv("MCP_TRANSPORT", "stdio").strip().lower()
-
     if transport == "stdio":
         mcp.run(transport="stdio")
         return
+    if transport != "streamable-http":
+        raise ValueError(f"Unsupported MCP_TRANSPORT: {transport}")
 
-    # Streamable HTTP (prod/remote)
-    host = os.getenv("HOST", "127.0.0.1")
-    port = int(os.getenv("PORT", "8000"))
-    path = os.getenv("MCP_PATH", "/mcp")
-    stateless_http = os.getenv("STATELESS_HTTP", "1") == "1"
-    json_response = os.getenv("JSON_RESPONSE", "1") == "1"
+    # Fail closed before creating/binding a listener; also covers MCP DELETE.
+    from .http_auth import authenticated_mcp_app, require_auth_token
+    import uvicorn
 
-    mcp.run(
-        transport="streamable-http",
-        host=host,
-        port=port,
-        path=path,
-        stateless_http=stateless_http,
-        json_response=json_response,
+    token = require_auth_token()
+    # The outer middleware enforces the configured Host and Origin allowlists.
+    # FastMCP's loopback defaults would also reject requests allowed by that policy.
+    mcp.settings.transport_security = TransportSecuritySettings(
+        enable_dns_rebinding_protection=False,
     )
+    app = authenticated_mcp_app(mcp.streamable_http_app(), token)
+    uvicorn.run(app, host=mcp.settings.host, port=mcp.settings.port, log_level="info")
+
 
 if __name__ == "__main__":
     main()

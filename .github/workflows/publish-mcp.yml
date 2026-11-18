@@ -33,7 +33,6 @@ jobs:
 
       - name: Run tests
         run: uv run pytest
-        continue-on-error: true # Continue even if tests fail (optional)
 
       - name: Build package
         run: uv build
