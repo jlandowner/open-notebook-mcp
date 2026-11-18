@@ -21,7 +21,7 @@ jobs:
             const packageName = context.repo.repo;
             const packageType = "container";
             const keepNonRelease = 10;
-            const releaseTagRegex = /^v\d+\.\d+\.\d+(?:[-+].*)?$/;
+            const releaseTagRegex = /^v?\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.-]+)?$/;
 
             const listVersions = async (scope) => {
               if (scope === "user") {

@@ -10,7 +10,7 @@ container E2E tests without publishing. GHCR publication is intentionally
 separated into a dedicated workflow and runs only for tags matching `v*` or a
 manual workflow dispatch.
 
-Published images keep semver release tags (`v*`) for deploy/rollback. A weekly
+Published images keep semver release tags (for `v*` releases, e.g. `1.2.3`) for deploy/rollback. A weekly
 cleanup workflow keeps only the newest 10 non-release image versions and removes
 older non-release versions automatically.
 
