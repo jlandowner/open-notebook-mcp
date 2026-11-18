@@ -222,47 +222,28 @@ answer = ask_simple(
 
 ## Available Tools
 
-<<<<<<< HEAD
 The server provides 19 tools across multiple categories:
-=======
-The server provides 28 tools across multiple categories:
->>>>>>> origin/main
 
 ### Meta Tools
 
 - `search_capabilities` - Progressive tool discovery
 
-### Notebooks (4 tools)
+### Notebooks (5 tools)
 
-- `list_notebooks`, `get_notebook`, `create_notebook`, `update_notebook`
+- `list_notebooks`, `get_notebook`, `create_notebook`, `update_notebook`, `delete_notebook`
 
-### Sources (4 tools)
+### Sources (5 tools)
 
-- `list_sources`, `get_source`, `create_source`, `update_source`
+- `list_sources`, `get_source`, `create_source`, `update_source`, `delete_source`
 
-### Notes (4 tools)
+### Notes (5 tools)
 
-- `list_notes`, `get_note`, `create_note`, `update_note`
+- `list_notes`, `get_note`, `create_note`, `update_note`, `delete_note`
 
 ### Search (3 tools)
 
 - `search`, `ask_question`, `ask_simple`
 
-<<<<<<< HEAD
-=======
-### Models (4 tools)
-
-- `list_models`, `get_model`, `create_model`, `get_default_models`
-
-### Chat (6 tools)
-
-- `list_chat_sessions`, `create_chat_session`, `get_chat_session`, `update_chat_session`, `execute_chat`, `get_chat_context`
-
-### Settings (2 tools)
-
-- `get_settings`, `update_settings`
-
->>>>>>> origin/main
 ## Architecture
 
 This server follows MCP best practices:
