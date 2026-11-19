@@ -68,7 +68,7 @@ def test_new_notebook_can_be_used(upstream, monkeypatch, setting):
     asyncio.run(create_and_populate())
     assert [(r.method, r.url.path) for r in upstream] == [
         ("POST", "/api/notebooks"),
-        ("POST", "/api/sources"),
+        ("POST", "/api/sources/json"),
         ("POST", "/api/notes"),
         ("PUT", "/api/notebooks/notebook:new"),
     ]
