@@ -7,8 +7,8 @@ An MCP (Model Context Protocol) server that provides tools to interact with the 
 ## Features
 
 - **Notebooks Management**: Create, read, and update notebooks
-- **Sources Management**: Add and manage content sources (links, uploads, text)
-- **Notes Management**: Create and organize notes within notebooks
+- **Sources Management**: Add and read content sources (links, uploads, text)
+- **Notes Management**: Add and edit notes within unprotected notebooks
 - **Search & AI**: Search content using vector/text search and ask questions
 - **Progressive Disclosure**: Efficient tool discovery with `search_capabilities`
 
@@ -54,9 +54,28 @@ OPEN_NOTEBOOK_URL=http://localhost:5055
 # Optional: Authentication password (if APP_PASSWORD is set in Open Notebook)
 OPEN_NOTEBOOK_PASSWORD=your_password_here
 
+# Optional: Notebook IDs protected against writes
+OPEN_NOTEBOOK_PROTECTED_NOTEBOOK_IDS=notebook:abc123,notebook:def456
+
 # Optional: Transport configuration (default: stdio)
 MCP_TRANSPORT=stdio  # or streamable-http for remote deployment
 ```
+
+### Notebook write protection
+
+Set `OPEN_NOTEBOOK_PROTECTED_NOTEBOOK_IDS` to a comma-separated list of full
+Notebook IDs from `list_notebooks`. The server matches IDs exactly, trims
+whitespace around entries, and ignores empty entries and duplicates.
+
+- `create_source`, `create_note`, and `update_notebook` reject protected IDs with
+  `NOTEBOOK_WRITE_FORBIDDEN` before calling the Open Notebook API.
+- An unset or empty list leaves every notebook open to these operations. A
+  malformed nonempty entry also blocks note edits until the list is fixed.
+- Agents can create notebooks and immediately add sources and notes to them.
+- `update_note` checks notebook membership through Open Notebook before editing.
+  It refuses edits if the note belongs to any protected notebook, has no
+  notebook, or its membership cannot be verified.
+- Existing sources can be read and searched. MCP does not expose `update_source`.
 
 ### Example Configuration
 
@@ -191,12 +210,6 @@ note = create_note(
     content="Important insights about AI applications...",
     topics=["AI", "Research"]
 )
-
-# Update a note
-update_note(
-    note_id=note["note"]["id"],
-    content="Updated insights..."
-)
 ```
 
 #### Searching and Asking Questions
@@ -222,7 +235,7 @@ answer = ask_simple(
 
 ## Available Tools
 
-The server provides 16 tools across multiple categories:
+The server provides 15 tools across multiple categories:
 
 ### Meta Tools
 
@@ -232,9 +245,9 @@ The server provides 16 tools across multiple categories:
 
 - `list_notebooks`, `get_notebook`, `create_notebook`, `update_notebook`
 
-### Sources (4 tools)
+### Sources (3 tools)
 
-- `list_sources`, `get_source`, `create_source`, `update_source`
+- `list_sources`, `get_source`, `create_source`
 
 ### Notes (4 tools)
 
