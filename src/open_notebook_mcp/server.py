@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import logging
 import os
 import re
@@ -9,6 +10,7 @@ from typing import Any, Literal, Optional
 
 import httpx
 from mcp.server.fastmcp import FastMCP
+from mcp.server.fastmcp.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 
 logging.basicConfig(level=logging.INFO)
@@ -103,7 +105,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         name="update_notebook",
-        summary="Update a notebook.",
+        summary="Update an unprotected notebook.",
         tags=("notebooks", "update", "write"),
         args={"notebook_id": "str", "name": "Optional[str]", "description": "Optional[str]", "archived": "Optional[bool]"},
         returns="dict[str, Any]",
@@ -131,20 +133,11 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         name="create_source",
-        summary="Create a new source (link, upload, or text).",
+        summary="Add a source to an unprotected notebook.",
         tags=("sources", "create", "write"),
         args={"notebook_id": "str", "type": "str", "url": "Optional[str]", "title": "Optional[str]", "embed": "bool"},
         returns="dict[str, Any]",
         example={"notebook_id": "notebook:abc123", "type": "link", "url": "https://example.com", "embed": True},
-        typical_bytes=2000,
-    ),
-    Capability(
-        name="update_source",
-        summary="Update a source.",
-        tags=("sources", "update", "write"),
-        args={"source_id": "str", "title": "Optional[str]", "topics": "Optional[list[str]]"},
-        returns="dict[str, Any]",
-        example={"source_id": "source:abc123", "title": "New Title"},
         typical_bytes=2000,
     ),
     # Notes API
@@ -168,7 +161,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         name="create_note",
-        summary="Create a new note.",
+        summary="Add a note to an unprotected notebook.",
         tags=("notes", "create", "write"),
         args={"notebook_id": "str", "title": "str", "content": "str", "topics": "Optional[list[str]]"},
         returns="dict[str, Any]",
@@ -177,7 +170,7 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         name="update_note",
-        summary="Update a note.",
+        summary="Update a note linked only to unprotected notebooks.",
         tags=("notes", "update", "write"),
         args={"note_id": "str", "title": "Optional[str]", "content": "Optional[str]", "topics": "Optional[list[str]]"},
         returns="dict[str, Any]",
@@ -353,6 +346,43 @@ async def make_request(
 # Notebooks API Tools
 # -----------------------------
 
+NOTEBOOK_ID_PATTERN = re.compile(r"notebook:[A-Za-z0-9_-]+")
+
+
+def get_protected_notebook_ids() -> set[str]:
+    return {
+        value.strip()
+        for value in os.getenv("OPEN_NOTEBOOK_PROTECTED_NOTEBOOK_IDS", "").split(",")
+        if value.strip()
+    }
+
+
+def require_notebook_write_access(notebook_id: str) -> None:
+    protected_ids = get_protected_notebook_ids()
+    target = None
+    if not NOTEBOOK_ID_PATTERN.fullmatch(notebook_id):
+        message = "Use a full notebook ID in the form notebook:<id>."
+        hint = "Copy the notebook ID returned by list_notebooks."
+    elif any(not NOTEBOOK_ID_PATTERN.fullmatch(value) for value in protected_ids):
+        target = notebook_id
+        message = "The protected notebook ID configuration is invalid."
+        hint = "Ask the operator to check OPEN_NOTEBOOK_PROTECTED_NOTEBOOK_IDS."
+    elif notebook_id in protected_ids:
+        target = notebook_id
+        message = "This notebook is protected against writes."
+        hint = "Use an unprotected notebook or create a new one."
+    else:
+        return
+
+    raise ToolError(json.dumps({
+        "error_code": "NOTEBOOK_WRITE_FORBIDDEN",
+        "notebook_id": target,
+        "message": message,
+        "hint": hint,
+        "request_id": generate_request_id(),
+    }))
+
+
 @mcp.tool()
 async def list_notebooks(
     archived: Optional[bool] = None,
@@ -441,6 +471,7 @@ async def update_notebook(
     Returns:
         Updated notebook details
     """
+    require_notebook_write_access(notebook_id)
     data = {}
     if name is not None:
         data["name"] = name
@@ -523,6 +554,7 @@ async def create_source(
     Returns:
         Created source details
     """
+    require_notebook_write_access(notebook_id)
     data = {
         "notebook_id": notebook_id,
         "type": type,
@@ -533,35 +565,7 @@ async def create_source(
     if title is not None:
         data["title"] = title
     
-    source = await make_request("POST", "/api/sources", json_data=data)
-    return {
-        "request_id": generate_request_id(),
-        "source": source,
-    }
-
-@mcp.tool()
-async def update_source(
-    source_id: str,
-    title: Optional[str] = None,
-    topics: Optional[list[str]] = None,
-) -> dict[str, Any]:
-    """Update a source.
-    
-    Args:
-        source_id: Source ID
-        title: Optional new title
-        topics: Optional list of topics
-    
-    Returns:
-        Updated source details
-    """
-    data = {}
-    if title is not None:
-        data["title"] = title
-    if topics is not None:
-        data["topics"] = topics
-    
-    source = await make_request("PUT", f"/api/sources/{source_id}", json_data=data)
+    source = await make_request("POST", "/api/sources/json", json_data=data)
     return {
         "request_id": generate_request_id(),
         "source": source,
@@ -633,6 +637,7 @@ async def create_note(
     Returns:
         Created note details
     """
+    require_notebook_write_access(notebook_id)
     data = {
         "notebook_id": notebook_id,
         "title": title,
@@ -647,6 +652,58 @@ async def create_note(
         "note": note,
     }
 
+async def require_note_write_access(note_id: str) -> None:
+    protected_ids = get_protected_notebook_ids()
+
+    def forbidden(message: str, hint: str) -> ToolError:
+        return ToolError(json.dumps({
+            "error_code": "NOTEBOOK_WRITE_FORBIDDEN",
+            "message": message,
+            "hint": hint,
+            "request_id": generate_request_id(),
+        }))
+
+    if not re.fullmatch(r"note:[A-Za-z0-9_-]+", note_id):
+        raise forbidden("Use a full note ID.", "Copy the ID returned by list_notes.")
+    if any(not NOTEBOOK_ID_PATTERN.fullmatch(value) for value in protected_ids):
+        raise forbidden(
+            "The protected notebook ID configuration is invalid.",
+            "Ask the operator to check OPEN_NOTEBOOK_PROTECTED_NOTEBOOK_IDS.",
+        )
+
+    lookup_error = forbidden(
+        "Could not verify the note's notebook membership.",
+        "Check the note ID and Open Notebook API availability.",
+    )
+
+    async def list_ids(endpoint: str, *, params: Optional[dict[str, Any]] = None) -> set[str]:
+        try:
+            rows = await make_request("GET", endpoint, params=params)
+        except Exception:
+            raise lookup_error from None
+        if not isinstance(rows, list) or any(
+            not isinstance(row, dict) or not isinstance(row.get("id"), str)
+            for row in rows
+        ):
+            raise lookup_error
+        return {row["id"] for row in rows}
+
+    # The notes API exposes membership through the notebook-scoped list only.
+    notebook_ids = await list_ids("/api/notebooks")
+    if any(not NOTEBOOK_ID_PATTERN.fullmatch(value) for value in notebook_ids):
+        raise lookup_error
+    for notebook_id in sorted(protected_ids & notebook_ids):
+        if note_id in await list_ids("/api/notes", params={"notebook_id": notebook_id}):
+            raise forbidden(
+                f"This note belongs to protected notebook {notebook_id}.",
+                "Create a separate note in an unprotected notebook.",
+            )
+    for notebook_id in sorted(notebook_ids - protected_ids):
+        if note_id in await list_ids("/api/notes", params={"notebook_id": notebook_id}):
+            return
+    raise lookup_error
+
+
 @mcp.tool()
 async def update_note(
     note_id: str,
@@ -654,17 +711,18 @@ async def update_note(
     content: Optional[str] = None,
     topics: Optional[list[str]] = None,
 ) -> dict[str, Any]:
-    """Update a note.
-    
+    """Update a note linked only to unprotected notebooks.
+
     Args:
         note_id: Note ID
         title: Optional new title
         content: Optional new content
         topics: Optional list of topics
-    
+
     Returns:
         Updated note details
     """
+    await require_note_write_access(note_id)
     data = {}
     if title is not None:
         data["title"] = title
@@ -672,7 +730,7 @@ async def update_note(
         data["content"] = content
     if topics is not None:
         data["topics"] = topics
-    
+
     note = await make_request("PUT", f"/api/notes/{note_id}", json_data=data)
     return {
         "request_id": generate_request_id(),
