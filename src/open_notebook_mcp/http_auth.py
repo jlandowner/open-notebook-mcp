@@ -80,7 +80,7 @@ def authenticated_mcp_app(
 ) -> ASGIApp:
     """Enforce Host, Origin, and Bearer checks on the entire HTTP ASGI app.
 
-    The original lifespan scope is forwarded to FastMCP unchanged.
+    The original lifespan scope is forwarded to the MCP ASGI app unchanged.
     """
     if allowed_hosts is None:
         allowed_hosts = _comma_separated(

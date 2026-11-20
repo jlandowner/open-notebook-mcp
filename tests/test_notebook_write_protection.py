@@ -3,7 +3,7 @@ import json
 
 import httpx
 import pytest
-from mcp.server.fastmcp.exceptions import ToolError
+from mcp.server.mcpserver.exceptions import ToolError
 
 from open_notebook_mcp import server
 

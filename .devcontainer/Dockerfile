@@ -62,6 +62,7 @@ RUN ARCH=$(dpkg --print-architecture) && \
 
 # Set up non-root user
 USER node
+RUN uv python install 3.14
 
 # Install global packages
 ENV NPM_CONFIG_PREFIX=/usr/local/share/npm-global
