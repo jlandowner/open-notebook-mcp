@@ -1,6 +1,6 @@
 # Build dependencies once; runtime never downloads Python packages.
 FROM ghcr.io/astral-sh/uv:0.13.9 AS uv
-FROM python:3.14-slim-bookworm AS python-base
+FROM python:3.14-slim-bookworm@sha256:3fe1a0b6c2d6b2ebb572906cdabeca75aeb558c0c17db5ffefbcf8094871c32b AS python-base
 FROM python-base AS builder
 COPY --from=uv /uv /uvx /usr/local/bin/
 WORKDIR /app
