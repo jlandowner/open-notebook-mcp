@@ -35,6 +35,7 @@ docker run --rm --read-only --tmpfs /tmp:rw,noexec,nosuid,size=16m \
   --cap-drop ALL --security-opt no-new-privileges \
   -p 127.0.0.1:8000:8000 \
   -e MCP_AUTH_TOKEN -e OPEN_NOTEBOOK_URL -e OPEN_NOTEBOOK_PASSWORD \
+  -e OPEN_NOTEBOOK_PROTECTED_NOTEBOOK_IDS \
   -e MCP_ALLOWED_HOSTS=localhost,127.0.0.1 \
   open-notebook-mcp:local
 ```
@@ -56,6 +57,7 @@ runtime. For another hostname, update `MCP_ALLOWED_HOSTS` accordingly.
 | `MCP_ALLOWED_ORIGINS` | Optional exact `Origin` allowlist (CSV); by default all requests with an Origin header are rejected |
 | `OPEN_NOTEBOOK_URL` | Open Notebook REST API endpoint |
 | `OPEN_NOTEBOOK_PASSWORD` | Open Notebook REST API credential; separate from the MCP Bearer token |
+| `OPEN_NOTEBOOK_PROTECTED_NOTEBOOK_IDS` | Optional comma-separated IDs of notebooks protected against additions, note edits, and notebook metadata updates |
 
 Static Bearer authentication is **not** an implementation of MCP OAuth 2.1. HTTP plus Bearer does not encrypt credentials or content on the wire. Use TLS when transport encryption is required.
 
