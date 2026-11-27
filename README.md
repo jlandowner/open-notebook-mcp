@@ -196,6 +196,14 @@ source = create_source(
     embed=True  # Generate embeddings
 )
 
+# Add text content directly as a source
+source = create_source(
+    notebook_id=notebook_id,
+    type="text",
+    title="Research Notes",
+    content="Text to add to the notebook.",
+)
+
 # List sources in a notebook
 sources = list_sources(notebook_id=notebook_id, limit=20)
 ```

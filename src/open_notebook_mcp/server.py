@@ -128,9 +128,9 @@ CAPABILITIES: tuple[Capability, ...] = (
         name="create_source",
         summary="Add a source to an unprotected notebook.",
         tags=("sources", "create", "write"),
-        args={"notebook_id": "str", "type": "str", "url": "Optional[str]", "title": "Optional[str]", "embed": "bool"},
+        args={"notebook_id": "str", "type": "Literal['link','upload','text']", "url": "Optional[str]", "title": "Optional[str]", "embed": "bool", "content": "Optional[str]"},
         returns="dict[str, Any]",
-        example={"notebook_id": "notebook:abc123", "type": "link", "url": "https://example.com", "embed": True},
+        example={"notebook_id": "notebook:abc123", "type": "text", "title": "Research notes", "content": "Text to add as a source.", "embed": True},
         typical_bytes=2000,
     ),
     # Notes API
@@ -530,10 +530,11 @@ async def get_source(source_id: str) -> dict[str, Any]:
 @mcp.tool()
 async def create_source(
     notebook_id: str,
-    type: str,
+    type: Literal["link", "upload", "text"],
     url: Optional[str] = None,
     title: Optional[str] = None,
     embed: bool = True,
+    content: Optional[str] = None,
 ) -> dict[str, Any]:
     """Create a new source (link, upload, or text).
     
@@ -543,11 +544,19 @@ async def create_source(
         url: URL for link type sources
         title: Optional title
         embed: Whether to generate embeddings (default: True)
+        content: Text body, required when type is 'text'
     
     Returns:
         Created source details
     """
     require_notebook_write_access(notebook_id)
+    if type == "text" and not content:
+        raise ToolError(json.dumps({
+            "error_code": "SOURCE_CONTENT_REQUIRED",
+            "message": "content is required when type is 'text'.",
+            "hint": "Provide the text body in the content argument.",
+            "request_id": generate_request_id(),
+        }))
     data = {
         "notebook_id": notebook_id,
         "type": type,
@@ -557,6 +566,8 @@ async def create_source(
         data["url"] = url
     if title is not None:
         data["title"] = title
+    if content is not None:
+        data["content"] = content
     
     source = await make_request("POST", "/api/sources/json", json_data=data)
     return {
