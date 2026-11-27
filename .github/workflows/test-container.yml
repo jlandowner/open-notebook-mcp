@@ -3,8 +3,28 @@ name: Test container
 on:
   pull_request:
     branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".dockerignore"
+      - ".python-version"
+      - "Dockerfile"
+      - "pyproject.toml"
+      - "scripts/**"
+      - "src/**"
+      - "tests/**"
+      - "uv.lock"
   push:
     branches: [main]
+    paths:
+      - ".github/workflows/**"
+      - ".dockerignore"
+      - ".python-version"
+      - "Dockerfile"
+      - "pyproject.toml"
+      - "scripts/**"
+      - "src/**"
+      - "tests/**"
+      - "uv.lock"
 
 permissions:
   contents: read
