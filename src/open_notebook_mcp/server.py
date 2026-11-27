@@ -9,21 +9,14 @@ from dataclasses import dataclass
 from typing import Any, Literal, Optional
 
 import httpx
-from mcp.server.fastmcp import FastMCP
-from mcp.server.fastmcp.exceptions import ToolError
+from mcp.server.mcpserver import MCPServer
+from mcp.server.mcpserver.exceptions import ToolError
 from mcp.server.transport_security import TransportSecuritySettings
 
 logging.basicConfig(level=logging.INFO)
 log = logging.getLogger("open-notebook-mcp")
 
-mcp = FastMCP(
-    "open-notebook-mcp",
-    host=os.getenv("HOST", "127.0.0.1"),
-    port=int(os.getenv("PORT", "8000")),
-    streamable_http_path=os.getenv("MCP_PATH", "/mcp"),
-    stateless_http=os.getenv("STATELESS_HTTP", "1") == "1",
-    json_response=os.getenv("JSON_RESPONSE", "1") == "1",
-)
+mcp = MCPServer("open-notebook-mcp")
 
 # -----------------------------
 # Configuration and Constants
@@ -851,6 +844,12 @@ async def ask_simple(
 def main() -> None:
     """Run the stdio server or the authenticated HTTP ASGI application."""
     transport = os.getenv("MCP_TRANSPORT", "stdio").strip().lower()
+    host = os.getenv("HOST", "127.0.0.1")
+    port = int(os.getenv("PORT", "8000"))
+    mcp_path = os.getenv("MCP_PATH", "/mcp")
+    stateless_http = os.getenv("STATELESS_HTTP", "1") == "1"
+    json_response = os.getenv("JSON_RESPONSE", "1") == "1"
+
     if transport == "stdio":
         mcp.run(transport="stdio")
         return
@@ -863,12 +862,21 @@ def main() -> None:
 
     token = require_auth_token()
     # The outer middleware enforces the configured Host and Origin allowlists.
-    # FastMCP's loopback defaults would also reject requests allowed by that policy.
-    mcp.settings.transport_security = TransportSecuritySettings(
+    # Transport-level loopback defaults would also reject requests allowed by that policy.
+    transport_security = TransportSecuritySettings(
         enable_dns_rebinding_protection=False,
     )
-    app = authenticated_mcp_app(mcp.streamable_http_app(), token)
-    uvicorn.run(app, host=mcp.settings.host, port=mcp.settings.port, log_level="info")
+    app = authenticated_mcp_app(
+        mcp.streamable_http_app(
+            streamable_http_path=mcp_path,
+            stateless_http=stateless_http,
+            json_response=json_response,
+            transport_security=transport_security,
+            host=host,
+        ),
+        token,
+    )
+    uvicorn.run(app, host=host, port=port, log_level="info")
 
 
 if __name__ == "__main__":
