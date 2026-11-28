@@ -373,7 +373,8 @@ async def _resolve_default_ask_model_id() -> str:
                 "Open Notebook returned an invalid default-model response; the ask request was not sent.",
                 "The response must include default_tools_model and default_chat_model as strings or null.",
             )
-        model_ids[field] = value.strip() if isinstance(value, str) else None
+        normalized = value.strip() if isinstance(value, str) else None
+        model_ids[field] = normalized or None
 
     model_id = model_ids["default_tools_model"] or model_ids["default_chat_model"]
     if model_id is None:

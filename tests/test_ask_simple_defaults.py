@@ -113,6 +113,18 @@ def test_defaults_api_failure_does_not_send_ask_or_expose_password(upstream, mon
             "DEFAULT_MODEL_NOT_CONFIGURED",
         ),
         (
+            {"default_tools_model": None, "default_chat_model": ""},
+            "DEFAULT_MODEL_NOT_CONFIGURED",
+        ),
+        (
+            {"default_tools_model": None, "default_chat_model": "   "},
+            "DEFAULT_MODEL_NOT_CONFIGURED",
+        ),
+        (
+            {"default_tools_model": "  ", "default_chat_model": "  "},
+            "DEFAULT_MODEL_NOT_CONFIGURED",
+        ),
+        (
             {"default_tools_model": 123, "default_chat_model": "model:chat"},
             "DEFAULT_MODELS_INVALID_RESPONSE",
         ),
