@@ -214,6 +214,13 @@ note = create_note(
 
 #### Searching and Asking Questions
 
+`ask_simple` uses the Open Notebook default model settings. This changes its
+public MCP input schema: remove `strategy_model`, `answer_model`, and
+`final_answer_model` from existing calls. The server reads the defaults on each
+call, preferring `default_tools_model` and falling back to `default_chat_model`,
+so settings changes take effect without restarting the MCP server. `ask_question`
+continues to accept explicit model IDs.
+
 ```python
 # Search content
 results = search(
@@ -226,9 +233,6 @@ results = search(
 # Ask a question using the same Open Notebook search API surface
 answer = ask_simple(
     question="What are the main AI applications mentioned?",
-    strategy_model="model:default",
-    answer_model="model:default",
-    final_answer_model="model:default",
     notebook_id=notebook_id
 )
 ```

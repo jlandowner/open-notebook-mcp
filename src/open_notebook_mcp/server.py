@@ -191,11 +191,11 @@ CAPABILITIES: tuple[Capability, ...] = (
     ),
     Capability(
         name="ask_simple",
-        summary="Ask a question about your content with simplified interface.",
+        summary="Ask a question using Open Notebook's configured default model.",
         tags=("search", "ask", "ai", "question", "simple"),
-        args={"question": "str", "strategy_model": "str", "answer_model": "str", "final_answer_model": "str"},
+        args={"question": "str", "notebook_id": "Optional[str]"},
         returns="dict[str, Any]",
-        example={"question": "Summarize my AI research", "strategy_model": "model:abc", "answer_model": "model:abc", "final_answer_model": "model:abc"},
+        example={"question": "Summarize my AI research", "notebook_id": "notebook:abc123"},
         typical_bytes=4000,
     ),
     # Search API remains the AI-assisted content retrieval surface; models/chat/settings are intentionally excluded from the public MCP tool list.
@@ -334,6 +334,55 @@ async def make_request(
                     error_msg = e.response.text or error_msg
             
             raise Exception(f"API request failed: {error_msg}")
+
+
+def _default_model_error(error_code: str, message: str, hint: str) -> ToolError:
+    return ToolError(json.dumps({
+        "error_code": error_code,
+        "message": message,
+        "hint": hint,
+        "request_id": generate_request_id(),
+    }))
+
+
+async def _resolve_default_ask_model_id() -> str:
+    """Fetch the current Open Notebook ask model, without caching defaults."""
+    try:
+        defaults = await make_request("GET", "/api/models/defaults")
+    except Exception:
+        raise _default_model_error(
+            "DEFAULT_MODELS_FETCH_FAILED",
+            "Could not retrieve Open Notebook default models; the ask request was not sent.",
+            "Check that Open Notebook is available and OPEN_NOTEBOOK_PASSWORD is correct.",
+        ) from None
+
+    required_fields = {"default_tools_model", "default_chat_model"}
+    if not isinstance(defaults, dict) or not required_fields.issubset(defaults):
+        raise _default_model_error(
+            "DEFAULT_MODELS_INVALID_RESPONSE",
+            "Open Notebook returned an invalid default-model response; the ask request was not sent.",
+            "The response must include default_tools_model and default_chat_model as strings or null.",
+        )
+
+    model_ids: dict[str, Optional[str]] = {}
+    for field in ("default_tools_model", "default_chat_model"):
+        value = defaults[field]
+        if value is not None and not isinstance(value, str):
+            raise _default_model_error(
+                "DEFAULT_MODELS_INVALID_RESPONSE",
+                "Open Notebook returned an invalid default-model response; the ask request was not sent.",
+                "The response must include default_tools_model and default_chat_model as strings or null.",
+            )
+        model_ids[field] = value.strip() if isinstance(value, str) else None
+
+    model_id = model_ids["default_tools_model"] or model_ids["default_chat_model"]
+    if model_id is None:
+        raise _default_model_error(
+            "DEFAULT_MODEL_NOT_CONFIGURED",
+            "Neither a default tools model nor a default chat model is configured; the ask request was not sent.",
+            "Configure a default tools model or default chat model in Open Notebook's model settings.",
+        )
+    return model_id
 
 # -----------------------------
 # Notebooks API Tools
@@ -805,28 +854,23 @@ async def ask_question(
 @mcp.tool()
 async def ask_simple(
     question: str,
-    strategy_model: str,
-    answer_model: str,
-    final_answer_model: str,
     notebook_id: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Ask a question about your content with simplified interface.
+    """Ask a question using the current Open Notebook default model.
     
     Args:
         question: Question to ask
-        strategy_model: Model ID for strategy generation
-        answer_model: Model ID for answering
-        final_answer_model: Model ID for final answer synthesis
         notebook_id: Optional notebook ID to limit context
     
     Returns:
         Simple answer
     """
+    model_id = await _resolve_default_ask_model_id()
     data = {
         "question": question,
-        "strategy_model": strategy_model,
-        "answer_model": answer_model,
-        "final_answer_model": final_answer_model,
+        "strategy_model": model_id,
+        "answer_model": model_id,
+        "final_answer_model": model_id,
     }
     if notebook_id is not None:
         data["notebook_id"] = notebook_id
