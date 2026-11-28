@@ -7,7 +7,7 @@ An MCP (Model Context Protocol) server that provides tools to interact with the 
 ## Features
 
 - **Notebooks Management**: Create, read, and update notebooks
-- **Sources Management**: Add and read content sources (links, uploads, text)
+- **Sources Management**: Add and read link and text sources
 - **Notes Management**: Add and edit notes within unprotected notebooks
 - **Search & AI**: Search content using vector/text search and ask questions
 - **Progressive Disclosure**: Efficient tool discovery with `search_capabilities`

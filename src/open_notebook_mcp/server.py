@@ -128,7 +128,7 @@ CAPABILITIES: tuple[Capability, ...] = (
         name="create_source",
         summary="Add a source to an unprotected notebook.",
         tags=("sources", "create", "write"),
-        args={"notebook_id": "str", "type": "Literal['link','upload','text']", "url": "Optional[str]", "title": "Optional[str]", "embed": "bool", "content": "Optional[str]"},
+        args={"notebook_id": "str", "type": "Literal['link','text']", "url": "Optional[str]", "title": "Optional[str]", "embed": "bool", "content": "Optional[str]"},
         returns="dict[str, Any]",
         example={"notebook_id": "notebook:abc123", "type": "text", "title": "Research notes", "content": "Text to add as a source.", "embed": True},
         typical_bytes=2000,
@@ -530,17 +530,17 @@ async def get_source(source_id: str) -> dict[str, Any]:
 @mcp.tool()
 async def create_source(
     notebook_id: str,
-    type: Literal["link", "upload", "text"],
+    type: Literal["link", "text"],
     url: Optional[str] = None,
     title: Optional[str] = None,
     embed: bool = True,
     content: Optional[str] = None,
 ) -> dict[str, Any]:
-    """Create a new source (link, upload, or text).
+    """Create a new link or text source.
     
     Args:
         notebook_id: Notebook ID to add source to
-        type: Source type ('link', 'upload', or 'text')
+        type: Source type ('link' or 'text')
         url: URL for link type sources
         title: Optional title
         embed: Whether to generate embeddings (default: True)
