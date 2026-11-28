@@ -12,6 +12,7 @@ from open_notebook_mcp.server import (
     search_capabilities,
     list_notebooks,
     create_notebook,
+    ask_simple,
 )
 
 
@@ -61,6 +62,16 @@ async def main():
         if result['notebooks']:
             for nb in result['notebooks'][:3]:
                 print(f"  - {nb.get('name', 'Unnamed')}: {nb.get('id', 'No ID')}")
+            notebook_id = result['notebooks'][0]['id']
+            print("\n--- Example 5: Ask a Question ---")
+            try:
+                answer = await ask_simple(
+                    question="What are the main ideas in this notebook?",
+                    notebook_id=notebook_id,
+                )
+                print(answer['result'])
+            except Exception as e:
+                print(f"  Could not ask a question: {e}")
         else:
             print("  (No notebooks found)")
     except Exception as e:
